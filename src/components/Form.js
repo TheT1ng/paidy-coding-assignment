@@ -23,8 +23,9 @@ export const Form = () => {
   const isFormValid = Object.values(errors).some((value) => value !== null)
 
   // This validates whatever fields are passed, here types would be great to verify that all values/errors/schema have same keys
+  // Can also be a pure function-helper
   const validateForm = (partialFormValues) => {
-    const validationErrors = Object.entries(partialFormValues).reduce((acc, [key, value]) => {
+    return Object.entries(partialFormValues).reduce((acc, [key, value]) => {
       // If the field is not required or doesn't need to be validated we skip it
       if(!credentialsValidationSchema.hasOwnProperty(key)) return acc
 
@@ -33,15 +34,6 @@ export const Form = () => {
         [key]: credentialsValidationSchema[key](value)
       }
     }, {})
-
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      ...validationErrors,
-    }))
-
-    // Also return any errors found to be able to get out of submit method
-    // Not sure how else would i achieve that in the same render
-    return Object.keys(validationErrors).length > 0
   }
 
   // Memoize it since it has no deps and controlled form components usually render a lot
@@ -70,16 +62,29 @@ export const Form = () => {
   }
 
   const handleFieldBlur = (event) => {
-    validateForm({
+    const validationErrors = validateForm({
       [event.target.name]: event.target.value,
     })
+
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      ...validationErrors,
+    }))
   }
 
   const handleFormSubmit = async (event) => {
     event.preventDefault()
 
-    // This is the most wacky thing here, imo
-    if(!validateForm(values)) return;
+    const validationErrors = validateForm(values)
+
+    if(Object.values(validationErrors).some((error) => error !== null)) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        ...validationErrors,
+      }))
+
+      return;
+    }
 
     setIsSubmitting(true)
 
